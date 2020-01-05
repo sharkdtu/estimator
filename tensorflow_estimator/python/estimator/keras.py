@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import os
 import re
+import time
 
 from tensorflow.python.client import session
 from tensorflow.python.distribute import distribution_strategy_context
@@ -370,7 +371,12 @@ def _save_first_checkpoint(keras_model, custom_objects, config,
   keras_model_dir = os.path.join(config.model_dir, 'keras')
   # Load weights and save to checkpoint if there is no checkpoint
   latest_path = checkpoint_management.latest_checkpoint(keras_model_dir)
-  if not latest_path:
+
+  if not config.is_chief:
+    while not latest_path:
+      time.sleep(1)
+      latest_path = checkpoint_management.latest_checkpoint(keras_model_dir)
+  elif not latest_path:
     keras_weights = None
     if _any_weight_initialized(keras_model):
       keras_weights = keras_model.get_weights()
